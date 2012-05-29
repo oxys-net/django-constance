@@ -15,6 +15,7 @@ from django.utils.formats import localize
 from django.utils.translation import ugettext as _
 
 from constance import config, settings
+import simplejson
 
 
 NUMERIC_WIDGET = forms.TextInput(attrs={'size': 10})
@@ -33,6 +34,7 @@ FIELDS = {
     date: (fields.DateField, {'widget': widgets.AdminDateWidget}),
     time: (fields.TimeField, {'widget': widgets.AdminTimeWidget}),
     float: (fields.FloatField, {'widget': NUMERIC_WIDGET}),
+    list : STRING_LIKE,
 }
 
 
@@ -40,12 +42,18 @@ class ConstanceForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(ConstanceForm, self).__init__(*args, **kwargs)
         for name, (default, help_text) in settings.CONFIG.items():
+            
             field_class, kwargs = FIELDS[type(default)]
             self.fields[name] = field_class(label=name, **kwargs)
-
+            
     def save(self):
         for name in self.cleaned_data:
-            setattr(config, name, self.cleaned_data[name])
+            
+            if type(settings.CONFIG.get(name)[0]) == list:
+                value = simplejson.loads(self.cleaned_data[name]) 
+            else:
+                value = self.cleaned_data[name]
+            setattr(config, name, value)
 
 
 class ConstanceAdmin(admin.ModelAdmin):
@@ -92,6 +100,10 @@ class ConstanceAdmin(admin.ModelAdmin):
             # Then if the returned value is None, get the default
             if value is None:
                 value = getattr(config, name)
+            
+            if type(settings.CONFIG.get(name)[0]) == list:
+                value = simplejson.dumps(value)
+                
             context['config'].append({
                 'name': name,
                 'default': localize(default),
