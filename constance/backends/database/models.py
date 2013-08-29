@@ -10,8 +10,9 @@ except ImportError:
                                "django-picklefield which is required for "
                                "the constance database backend.")
 
+
 class Constance(models.Model):
-    key = models.TextField()
+    key = models.CharField(max_length=255, unique=True)
     value = PickledObjectField()
 
     class Meta:
